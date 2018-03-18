@@ -44,29 +44,37 @@ gapFill <- function(reactionList, reference, limit = 0.25, woCompartment=FALSE,c
   }
   reactions <- as.vector(unique(reactionList))
   reference <- as.vector(unique(reference))
+  # Extract all orphan metabolites from reactionList (OrphanOriginal)
   orphan <- unique(c(orphanReactants(reactions),orphanProducts(reactions)))
+  # do
   repeat{
+    # Compute the addition cost for all stoichiometric reactions from the reference
+    # Select stoichiometric reactions with additionCost lower or equal than limit
+    ref <- reference[additionCost(reference,reactions)<=limit]
+    # Extract all orphan reactants from reactionList
     orphan_r <- orphanReactants(reactions)
+    # Count the number of orphan reactants that are in orphanOriginal
     orphan_r <- orphan_r[orphan_r%in%orphan]
     message(paste0(length(orphan_r)," Orphan reactants found"))
-    to.add <- unique(unlist(lapply(orphan_r,function(orphan){reference[grep(orphan,reactants(reference),fixed = TRUE)]})))
-    rxn <- to.add[additionCost(to.add,reactionList)<=limit]
-    if(length(orphan_r)<=length(orphanReactants(c(reactions,rxn)))){
+    # Identify the reactions that contain orphan reactants in selected stoichiometric reactions
+    to.add <- unique(unlist(lapply(orphan_r,function(orphan){ref[grep(orphan,reactants(ref),fixed = TRUE)]})))
+    # If the number of orphanOriginals \in OrphanReactant is lower than OrphanOriginals \in orphanReactant \in orphans(reactionList \cup to.add)
+    if(sum(orphan%in%orphan_r) <= sum(orphan%in%orphanReactants(unique(c(reactions,to.add))))){
       break;
     } else {
-      reactions <- unique(c(reactions,rxn))
+      reactions <- unique(c(reactions,to.add))
     }
   }
   repeat{
+    ref <- reference[additionCost(reference,reactions)<=limit]
     orphan_p <- orphanProducts(reactions)
     orphan_p <- orphan_p[orphan_p%in%orphan]
     message(paste0(length(orphan_p)," Orphan products found"))
-    to.add <- unlist(lapply(orphan_p,function(orphan){reference[grep(orphan,products(reference),fixed = TRUE)]}))
-    rxn <- to.add[additionCost(to.add,reactionList)<=limit]
-    if(length(orphan_p)<=length(orphanProducts(c(reactions,rxn)))){
+    to.add <- unlist(lapply(orphan_p,function(orphan){ref[grep(orphan,products(ref),fixed = TRUE)]}))
+    if(sum(orphan%in%orphan_p) <= sum(orphan%in%orphanProducts(unique(c(reactions,to.add))))){
       break;
     } else{
-      reactions <- unique(c(reactions,rxn))
+      reactions <- unique(c(reactions,to.add))
     }
   }
   reactions <- unique(reactions)
@@ -76,3 +84,4 @@ gapFill <- function(reactionList, reference, limit = 0.25, woCompartment=FALSE,c
     return(reactions[!reactions%in%reactionList])
   }
 }
+
